@@ -11,6 +11,9 @@ from api.predictors.rule import estimate_delivery_minutes
         (0, 1, 12.0),
         (2.5, 3, 23.5),
         (100, 1000, 2310.0),
+        (0.1, 0, 10.3),
+        (1000, 0, 3010.0),
+        (0, 10000, 20010.0),
     ],
 )
 def test_known_inputs(distance_km, pending_orders, expected):
@@ -18,6 +21,7 @@ def test_known_inputs(distance_km, pending_orders, expected):
     assert estimate_delivery_minutes(distance_km, pending_orders) == pytest.approx(expected)
 
 
-def test_returns_float():
-    """정수 입력이어도 float 을 돌려준다."""
-    assert isinstance(estimate_delivery_minutes(1, 1), float)
+@pytest.mark.parametrize(("distance_km", "pending_orders"), [(0, 0), (1, 1), (1.5, 2)])
+def test_returns_float(distance_km, pending_orders):
+    """정수·소수 입력 모두 float 을 돌려준다."""
+    assert isinstance(estimate_delivery_minutes(distance_km, pending_orders), float)
