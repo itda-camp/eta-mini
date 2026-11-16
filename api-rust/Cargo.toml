@@ -1,0 +1,21 @@
+[package]
+name = "eta-rust"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+axum = "0.8.9"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal"] }
+# arbitrary_precision: 숫자 원문("2.0", "1e2", 아주 큰 정수)을 그대로 받아 정수 표기 여부를 가린다.
+# preserve_order: 응답 키 순서를 FastAPI 와 같게 둔다.
+serde_json = { version = "1", features = ["arbitrary_precision", "preserve_order"] }
+# load-dynamic: ONNX Runtime 을 링크하거나 내려받지 않고, 실행할 때 ORT_LIB 경로의 공유 라이브러리를 연다.
+# 기본 기능(download-binaries, copy-dylibs 등)은 끈다.
+ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "load-dynamic", "api-31"] }
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
+
+[profile.release]
+strip = true
