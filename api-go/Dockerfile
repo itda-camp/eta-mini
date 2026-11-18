@@ -5,21 +5,23 @@
 # ── ONNX Runtime: 버전은 uv.lock 의 onnxruntime 을 따른다 (Python 서빙과 같은 런타임) ──
 FROM debian:trixie-slim AS onnxruntime
 ARG TARGETARCH
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl unzip \
     && rm -rf /var/lib/apt/lists/*
 COPY uv.lock /tmp/uv.lock
 RUN set -eu; \
     ORT_VERSION=$(awk '/^name = "onnxruntime"$/ {found=1; next} found && /^version = / {gsub(/"/, "", $3); print $3; exit}' /tmp/uv.lock); \
     [ -n "$ORT_VERSION" ] || { echo "uv.lock 에서 onnxruntime 버전을 찾지 못했다" >&2; exit 1; }; \
     case "$TARGETARCH" in \
-      amd64) ORT_ARCH=x64 ;; \
-      arm64) ORT_ARCH=aarch64 ;; \
+      amd64) ORT_RID=linux-x64 ;; \
+      arm64) ORT_RID=linux-arm64 ;; \
       *) echo "지원하지 않는 TARGETARCH: $TARGETARCH" >&2; exit 1 ;; \
     esac; \
-    echo "onnxruntime ${ORT_VERSION} (linux-${ORT_ARCH})"; \
-    curl -fsSL "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/onnxruntime-linux-${ORT_ARCH}-${ORT_VERSION}.tgz" \
-      | tar -xz -C /opt; \
-    mv "/opt/onnxruntime-linux-${ORT_ARCH}-${ORT_VERSION}" /opt/onnxruntime
+    echo "onnxruntime ${ORT_VERSION} (${ORT_RID})"; \
+    # GitHub 릴리스 대신 NuGet 패키지에서 받는다 — 같은 libonnxruntime.so 가 runtimes/<플랫폼>/native/ 에 들어 있다
+    curl -fsSL "https://www.nuget.org/api/v2/package/Microsoft.ML.OnnxRuntime/${ORT_VERSION}" -o /tmp/ort.nupkg; \
+    mkdir -p /opt/onnxruntime/lib; \
+    unzip -j -q /tmp/ort.nupkg "runtimes/${ORT_RID}/native/*" -d /opt/onnxruntime/lib; \
+    rm /tmp/ort.nupkg
 
 # ── Go 빌드: onnxruntime_go 는 cgo 로 libonnxruntime 을 dlopen 한다 ──
 FROM golang:1.27-trixie AS build
